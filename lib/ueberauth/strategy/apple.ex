@@ -3,7 +3,7 @@ defmodule Ueberauth.Strategy.Apple do
   Google Strategy for Überauth.
   """
 
-  use Ueberauth.Strategy, uid_field: :uid, default_scope: "name email"
+  use Ueberauth.Strategy, uid_field: :uid, default_scope: "name email", ignores_csrf_attack: true
 
   alias Ueberauth.Auth.Info
   alias Ueberauth.Auth.Credentials
@@ -37,7 +37,8 @@ defmodule Ueberauth.Strategy.Apple do
 
     case Ueberauth.Strategy.Apple.OAuth.get_access_token([code: code], opts) do
       {:ok, token} ->
-        %{"email" => user_email, "sub" => user_uid} = UeberauthApple.id_token_payload(token.other_params["id_token"])
+        %{"email" => user_email, "sub" => user_uid} =
+          UeberauthApple.id_token_payload(token.other_params["id_token"])
 
         apple_user =
           user

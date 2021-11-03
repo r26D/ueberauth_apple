@@ -28,7 +28,7 @@ defmodule UeberauthApple.Mixfile do
   defp deps do
     [
       {:oauth2, "~> 2.0"},
-      {:ueberauth, "~> 0.5"},
+      {:ueberauth, "~> 0.7"},
       {:jose, "~> 1.0"},
       {:httpoison, "~> 1.0"},
       {:credo, "~> 0.8", only: [:dev, :test]},
