@@ -122,12 +122,13 @@ defmodule Ueberauth.Strategy.Apple do
   """
   def info(conn) do
     user = conn.private.apple_user
-    name = user["name"]
+
 
     %Info{
       email: user["email"],
-      first_name: name && name["firstName"],
-      last_name: name && name["lastName"]
+      name: get_name(user["name"]),
+      first_name: get_first_name(user["name"]),
+      last_name: get_last_name(user["name"])
     }
   end
 
@@ -185,4 +186,11 @@ defmodule Ueberauth.Strategy.Apple do
     |> Map.get(:cookies)
     |> Map.get(@state_param_cookie_name)
   end
+  defp get_name(user) do
+    [get_first_name(user), get_last_name(user)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+  defp get_first_name(%{"firstName" => first_name}),do: first_name
+  defp get_last_name(%{"lastName" => last_name}),do: last_name
 end
