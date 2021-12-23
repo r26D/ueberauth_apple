@@ -3,71 +3,64 @@ defmodule Ueberauth.Strategy.Apple do
   Google Strategy for Überauth.
   """
 
-  use Ueberauth.Strategy, uid_field: :uid, default_scope: "name email", ignores_csrf_attack: true
+  use Ueberauth.Strategy, uid_field: :uid, default_scope: "name email"
 
   alias Ueberauth.Auth.Info
   alias Ueberauth.Auth.Credentials
   alias Ueberauth.Auth.Extra
-  alias Ueberauth.Failure.Error
 
-  @state_param_cookie_name "apple.state.param"
+
 
   @doc """
   Handles initial request for Apple authentication.
   """
   def handle_request!(conn) do
     scopes = conn.params["scope"] || option(conn, :default_scope)
-    response_type = conn.params["response_type"] || option(conn, :response_type)
-    state = 24 |> :crypto.strong_rand_bytes() |> Base.url_encode64() |> binary_part(0, 24)
 
     params =
       [
         scope: scopes,
-        response_type: response_type,
-        response_mode: "form_post",
-        state: state
+        response_mode: "form_post"
       ]
       |> with_optional(:prompt, conn)
       |> with_optional(:access_type, conn)
       |> with_param(:access_type, conn)
       |> with_param(:prompt, conn)
       |> with_param(:response_mode, conn)
+      |> with_state_param(conn)
 
     opts = oauth_client_options_from_conn(conn)
+    redirect!(conn, Ueberauth.Strategy.Apple.OAuth.authorize_url!(params, opts))
 
-    conn
-    |> put_resp_cookie(@state_param_cookie_name, state)
-    |> redirect!(Ueberauth.Strategy.Apple.OAuth.authorize_url!(params, opts))
   end
 
   @doc """
   Handles the callback from Apple.
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code} = params} = conn) do
-    if state_param_matches?(conn) do
-      user = (params["user"] && Ueberauth.json_library().decode!(params["user"])) || %{}
-      opts = oauth_client_options_from_conn(conn)
+    params = [code: code]
+    opts = oauth_client_options_from_conn(conn)
+    case Ueberauth.Strategy.Apple.OAuth.get_access_token(params, opts) do
+      {:ok, token} ->
+        user = (params["user"] && Ueberauth.json_library().decode!(params["user"])) || %{}
 
-      case Ueberauth.Strategy.Apple.OAuth.get_access_token([code: code], opts) do
-        {:ok, token} ->
-          %{"email" => user_email, "sub" => user_uid} =
-            UeberauthApple.id_token_payload(token.other_params["id_token"])
+        %{"email" => user_email, "sub" => user_uid} =
+          UeberauthApple.id_token_payload(token.other_params["id_token"])
 
-          apple_user =
-            user
-            |> Map.put("uid", user_uid)
-            |> Map.put("email", user_email)
+        apple_user =
+          user
+          |> Map.put("uid", user_uid)
+          |> Map.put("email", user_email)
 
-          conn
-          |> put_private(:apple_token, token)
-          |> put_private(:apple_user, apple_user)
+        conn
+        |> put_private(:apple_token, token)
+        |> put_private(:apple_user, apple_user)
 
-        {:error, {error_code, error_description}} ->
-          set_errors!(conn, [error(error_code, error_description)])
-      end
-    else
-      add_state_mismatch_error(conn, __MODULE__)
+
+      {:error, {error_code, error_description}} ->
+        set_errors!(conn, [error(error_code, error_description)])
     end
+
   end
 
   @doc false
@@ -166,23 +159,4 @@ defmodule Ueberauth.Strategy.Apple do
     Keyword.get(options(conn), key, Keyword.get(default_options(), key))
   end
 
-  defp add_state_mismatch_error(conn, strategy) do
-    conn
-    |> set_errors!([
-      %Error{message_key: :csrf_attack, message: "Cross-Site Request Forgery attack"}
-    ])
-    |> handle_cleanup!()
-  end
-
-  defp state_param_matches?(conn) do
-    param_cookie = conn.params["state"]
-    not is_nil(param_cookie) and param_cookie == get_state_cookie(conn)
-  end
-
-  defp get_state_cookie(conn) do
-    conn
-    |> Plug.Conn.fetch_session()
-    |> Map.get(:cookies)
-    |> Map.get(@state_param_cookie_name)
-  end
 end
