@@ -16,6 +16,7 @@ defmodule UeberauthApple.Mixfile do
       source_url: @url,
       homepage_url: @url,
       description: description(),
+      extra_applications: [:httpoison, :jose],
       deps: deps(),
       docs: docs()
     ]
@@ -50,7 +51,9 @@ defmodule UeberauthApple.Mixfile do
       files: ["lib", "mix.exs", "README.md", "LICENSE"],
       maintainers: ["Jerry Luk"],
       licenses: ["MIT"],
-      links: %{GitHub: @url}
+      links: %{
+        GitHub: @url
+      }
     ]
   end
 end
