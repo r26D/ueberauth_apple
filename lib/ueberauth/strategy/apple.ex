@@ -1,6 +1,6 @@
 defmodule Ueberauth.Strategy.Apple do
   @moduledoc """
-  Google Strategy for Überauth.
+  Apple Strategy for Überauth.
   """
 
   use Ueberauth.Strategy, uid_field: :uid, default_scope: "name email", ignores_csrf_attack: true
