@@ -16,14 +16,13 @@ defmodule UeberauthApple.Mixfile do
       source_url: @url,
       homepage_url: @url,
       description: description(),
-      extra_applications: [:httpoison, :jose],
       deps: deps(),
       docs: docs()
     ]
   end
 
   def application do
-    [applications: [:logger, :oauth2, :ueberauth]]
+    [applications: [:logger, :oauth2, :ueberauth, :httpoison, :jose]]
   end
 
   defp deps do
