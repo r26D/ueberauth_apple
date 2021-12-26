@@ -2,6 +2,32 @@
 
 > Apple OAuth2 strategy for Überauth.
 
+## Current Issues 
+
+### CSRF All the way down.
+
+Because of how Überauth handles CSRF - it gets turned off in this plugin and handled manually via cookies.  This handles the problem that the current
+system is looking in the url for state data and since Apple uses a POST - it isn't where it is expects.
+
+Second - if you are using Phoenix - you may need to turn off CSRF checking of the POST callback since the client doesn't know
+how to provide this information. You can pull the csrf part out of the browser pipeline and then do the following:
+
+
+```elixir
+pipeline :browser_with_no_csrf do
+    #Copy your browser plugin and comment out the following line
+   # plug :protect_from_forgery
+  end
+  ```
+Then you can scope the issue to just the POST callbacks.
+```elixir
+scope "/auth"  do
+  pipe_through :browser_no_csrf
+  post "/:provider/callback", AuthController, :callback
+end
+```
+
+
 ## Installation
 
 1. Setup your application at [Apple Developer Console](https://developer.apple.com).

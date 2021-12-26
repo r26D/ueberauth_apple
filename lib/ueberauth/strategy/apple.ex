@@ -1,9 +1,13 @@
 defmodule Ueberauth.Strategy.Apple do
   @moduledoc """
-  Apple Strategy for Überauth.
+  Apple Strategy for Üeberauth.
   """
 
-  use Ueberauth.Strategy, uid_field: :uid, default_scope: "name email", ignores_csrf_attack: true
+  use Ueberauth.Strategy, uid_field: :uid,
+                          default_scope: "name email",
+                          response_type: "code id_token" ,
+                          response_mode: "form_post",
+                          ignores_csrf_attack: true
 
   alias Ueberauth.Auth.Info
   alias Ueberauth.Auth.Credentials
@@ -18,13 +22,14 @@ defmodule Ueberauth.Strategy.Apple do
   def handle_request!(conn) do
     scopes = conn.params["scope"] || option(conn, :default_scope)
     response_type = conn.params["response_type"] || option(conn, :response_type)
+    response_mode = conn.params["response_mode"] || option(conn, :response_mode)
     state = 24 |> :crypto.strong_rand_bytes() |> Base.url_encode64() |> binary_part(0, 24)
 
     params =
       [
         scope: scopes,
         response_type: response_type,
-        response_mode: "form_post",
+        response_mode: response_mode,
         state: state
       ]
       |> with_optional(:prompt, conn)
@@ -45,6 +50,7 @@ defmodule Ueberauth.Strategy.Apple do
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code} = params} = conn) do
     if state_param_matches?(conn) do
+
       user = (params["user"] && Ueberauth.json_library().decode!(params["user"])) || %{}
       opts = oauth_client_options_from_conn(conn)
 
@@ -61,9 +67,12 @@ defmodule Ueberauth.Strategy.Apple do
           conn
           |> put_private(:apple_token, token)
           |> put_private(:apple_user, apple_user)
+          |> delete_resp_cookie(@state_param_cookie_name)
 
         {:error, {error_code, error_description}} ->
-          set_errors!(conn, [error(error_code, error_description)])
+          conn
+          |> delete_resp_cookie(@state_param_cookie_name)
+          |> set_errors!( [error(error_code, error_description)])
       end
     else
       add_state_mismatch_error(conn, __MODULE__)
@@ -122,7 +131,6 @@ defmodule Ueberauth.Strategy.Apple do
   """
   def info(conn) do
     user = conn.private.apple_user
-
 
     %Info{
       email: user["email"],
@@ -187,10 +195,18 @@ defmodule Ueberauth.Strategy.Apple do
     |> Map.get(@state_param_cookie_name)
   end
   defp get_name(user) do
-    [get_first_name(user), get_last_name(user)]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" ")
+    parts = [get_first_name(user), get_last_name(user)]
+            |> Enum.reject(&is_nil/1)
+
+    case Enum.count(parts) do
+      0 -> nil
+      1 -> Enum.at(parts, 0)
+      _ -> Enum.join(parts, " ")
+    end
+
   end
+  defp get_first_name(nil),do: nil
   defp get_first_name(%{"firstName" => first_name}),do: first_name
+  defp get_last_name(nil),do: nil
   defp get_last_name(%{"lastName" => last_name}),do: last_name
 end

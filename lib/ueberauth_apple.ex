@@ -50,5 +50,5 @@ defmodule UeberauthApple do
   end
 
   def generate_client_secret(opts) when is_list(opts),
-    do: opts |> Enum.into(%{}) |> generate_client_secret()
+      do: opts |> Enum.into(%{}) |> generate_client_secret()
 end
