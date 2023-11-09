@@ -30,7 +30,7 @@ defmodule UeberauthApple.Mixfile do
       {:oauth2, "~> 2.1"},
       {:ueberauth, "~> 0.10"},
       {:jose, "~> 1.0"},
-      {:httpoison, "~> 2.1"},
+      {:httpoison, "~> 1.7"},
       {:credo, "~> 1.7", only: [:dev, :test]},
       {:earmark, ">= 0.0.0", only: :dev},
       {:ex_doc, "~> 0.30", only: :dev}
